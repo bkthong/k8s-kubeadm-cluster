@@ -53,12 +53,11 @@ vim-enhanced
 cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
 EOF
 sudo sysctl --system
 
 cat <<EOF | sudo tee -a /etc/hosts
-192.168.122.201 master master.lab.example.com
+192.168.122.201 master01 master01.lab.example.com
 192.168.122.211 worker01 worker01.lab.example.com
 192.168.122.212 worker02 worker02.lab.example.com
 EOF

@@ -1,0 +1,44 @@
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#join-nodes
+- name: Play to run on worker nodes to join the control plane
+  gather_facts: false
+  hosts: workers
+  become: true
+  vars:
+    #set this value when calling the playbookm. ansible_playbook -e join_token=
+    #obtain the token on control plane nodes using "kubeadm token list"
+    join_token: "n7d0ws.7xe2asdazp7njtmb"   
+
+    control_plane_host: master01.lab.example.com
+    control_plane_port: 6443
+
+    #obtain discovery_token_ca_cert_hash on the control node using
+    # openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+    discovery_token_ca_cert_hash: "29d958a03c0677e5d0338df90fdbe7a429025372b8bcd947708f8043de7840bc"   
+
+    kubelet_config: /var/lib/kubelet/config.yaml
+
+  tasks:
+  # The following command fails if the node has already joined.
+  - name: Join the control plane
+    command: > 
+      kubeadm join --token {{ join_token }}  {{ control_plane_host }}:{{ control_plane_port }} 
+      --discovery-token-ca-cert-hash sha256:{{ discovery_token_ca_cert_hash }}
+
+  - name: Wait for the {{ kubelet_config }} file to appear
+    wait_for:
+      path: "{{ kubelet_config }}"
+
+  - name: Set the cgroup driver to systemd 
+    lineinfile:
+      path: "{{ kubelet_config }}"
+      line: "cgroupDriver: systemd"
+      regex: ^cgroupDriver
+    register: output_cgroup
+
+  - name: Restart kubelet if cgroup driver was changed
+    systemd:
+      state: restarted
+      enabled: true
+      daemon_reload: yes
+      name: kubelet
+    when: output_cgroup.changed

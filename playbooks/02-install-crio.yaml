@@ -1,0 +1,48 @@
+# https://kubernetes.io/docs/setup/production-environment/container-runtimes/#cri-o
+- name: Play to install crio
+  hosts: masters,workers
+  become: true
+  vars:
+    crio_version: "1.18"
+    os: CentOS_7
+    yum_repos:
+      - url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/{{ os }}/devel:kubic:libcontainers:stable.repo
+        dest: /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo
+      - url: https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version}}/{{ os }}/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo
+        dest: /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo
+  tasks:
+  - name: Ensure neccessary kernel modules loaded
+    modprobe:
+      name: "{{ item }}"
+      state: present
+    loop:
+    - overlay
+    - br_netfilter
+
+  - name: Ensure sysctl parameters set
+    sysctl:
+      name: "{{ item }}" 
+      value: "1"
+      sysctl_file: /etc/sysctl.d/99-kubernetes-cri.conf
+    loop:
+    - net.bridge.bridge-nf-call-iptables
+    - net.ipv4.ip_forward
+    - net.bridge.bridge-nf-call-ip6tables
+    
+  - name: Setup yum repos for crio installation
+    get_url: 
+      url: "{{ item.url }}"
+      dest: "{{ item.dest }}"
+    loop: "{{ yum_repos }}"
+
+  - name: Ensure crio is installed
+    yum: 
+      name: cri-o
+      state: latest
+
+  - name: Ensure systemd reloads and crio is started and enabled
+    systemd:
+      state: started
+      enabled: true
+      daemon_reload: yes
+      name: crio

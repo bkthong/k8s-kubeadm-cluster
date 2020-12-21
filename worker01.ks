@@ -50,7 +50,7 @@ vim-enhanced
 
 %post
 cat <<EOF | sudo tee -a /etc/hosts
-192.168.122.201 master master.lab.example.com
+192.168.122.201 master01 master01.lab.example.com
 192.168.122.211 worker01 worker01.lab.example.com
 192.168.122.212 worker02 worker02.lab.example.com
 EOF

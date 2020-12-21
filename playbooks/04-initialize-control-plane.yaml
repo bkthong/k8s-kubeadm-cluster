@@ -1,0 +1,64 @@
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
+# Currently only catering for single master
+
+- name: Initialize the control plane using kubeadm init 
+  hosts: masters
+  gather_facts: false
+  become: true
+  vars:
+    kubelet_config: /var/lib/kubelet/config.yaml
+    admin_config: /etc/kubernetes/admin.conf
+  tasks:
+  - name: Check whether {{ admin_config }} exists
+    stat:
+      path: "{{ admin_config }}"
+    register: file_check
+
+  - name: The {{ admin_config }} should not exist 
+    assert: 
+      that: file_check.stat.exists != true
+      fail_msg: "{{ admin_config }} already exists. You may need to delete the control plane using kubeadm reset"
+      success_msg: "{{ admin_config }} does not exist. Assuming control plane has not been initialized"
+
+  - name: Initialize the control plane
+    command: kubeadm init
+    args:
+      creates: /etc/kubernetes/admin.conf
+    async: 300   #run in background
+    poll: 0      #we want to proceed to the task that sets the cgroup driver
+                 #so that this command will succeed
+    register: output
+
+  - name: Wait for the {{ kubelet_config }} file to appear
+    wait_for:
+      path: "{{ kubelet_config }}"
+
+  - name: Set the cgroup driver to systemd 
+    lineinfile:
+      path: "{{ kubelet_config }}"
+      line: "cgroupDriver: systemd"
+      regex: ^cgroupDriver
+    register: output_cgroup
+
+  - name: Restart kubelet if cgroup driver was changed
+    systemd:
+      state: restarted
+      enabled: true
+      daemon_reload: yes
+      name: kubelet
+    when: output_cgroup.changed
+
+  - name: Check on the kubeadmin init background task to completion or timeout
+    async_status:
+      jid: "{{ output.ansible_job_id }}"
+    register: job_result
+    until: job_result.finished
+    retries: 100
+    delay: 10
+
+  - name: Inform on the /etc/kubernetes/admin.conf file
+    debug:
+      msg: |
+        The /etc/kubernetes/admin.conf can be copied to ~/.kube/config to acccess the cluster.
+        You can get the token for worker nodes to join using kubeadm token list
+
