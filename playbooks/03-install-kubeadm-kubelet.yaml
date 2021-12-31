@@ -4,6 +4,7 @@
   hosts: masters,workers
   become: true
   vars:
+  gather_facts: false
   tasks:
   - name: Ensure neccessary kernel modules loaded
     modprobe:

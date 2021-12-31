@@ -2,6 +2,7 @@
 - name: Play to install crio
   hosts: masters,workers
   become: true
+  gather_facts: false
   vars:
     crio_version: "1.18"
     os: CentOS_7

@@ -1,0 +1,39 @@
+# Requires the kubeconfig file with the x509 cert to login
+# Uses the calico manifest downloaded and configured (see calico_files/README.txt)
+
+- name: Allow BGP as calico uses BGP
+  hosts: masters,workers
+  become: true
+  gather_facts: false
+  tasks:
+  - name: Allow BGP service on firewalld
+    firewalld:
+      service: bgp
+      state: enabled
+      immediate: true
+      permanent: true
+
+- name: Install cni
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    cni_manifest_file: /tmp/temp_calico_cni.yaml
+  module_defaults:
+    group/k8s:
+      validate_certs: false
+      kubeconfig: kubeconfig
+
+  tasks:
+  #Using the calico manifest which utilizes the k8s api datastore.
+  #The calico manifest that utilizes etcd data store requires changes
+  #and to keep things simple, not using that
+  - name: Download calico cni manifest
+    get_url:
+      url: https://docs.projectcalico.org/manifests/calico.yaml
+      dest: "{{ cni_manifest_file }}"
+  - name: Create the neccessary cni k8s resources
+    k8s:
+      state: present
+      definition: "{{ lookup('file' , cni_manifest_file ) }}"
+

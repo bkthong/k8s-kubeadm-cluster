@@ -6,14 +6,14 @@
   vars:
     #set this value when calling the playbookm. ansible_playbook -e join_token=
     #obtain the token on control plane nodes using "kubeadm token list"
-    join_token: "n7d0ws.7xe2asdazp7njtmb"   
+    join_token: "o0j5ca.2t2u3szd1990casg"   
 
     control_plane_host: master01.lab.example.com
     control_plane_port: 6443
 
     #obtain discovery_token_ca_cert_hash on the control node using
     # openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
-    discovery_token_ca_cert_hash: "29d958a03c0677e5d0338df90fdbe7a429025372b8bcd947708f8043de7840bc"   
+    discovery_token_ca_cert_hash: "4628defc873cf306bb1ff435a3a5194b4e283fe27720b9abae427f5b4767c6ba"   
 
     kubelet_config: /var/lib/kubelet/config.yaml
 

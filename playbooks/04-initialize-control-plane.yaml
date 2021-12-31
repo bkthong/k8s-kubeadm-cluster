@@ -21,7 +21,10 @@
       success_msg: "{{ admin_config }} does not exist. Assuming control plane has not been initialized"
 
   - name: Initialize the control plane
-    command: kubeadm init
+    command: >
+      kubeadm init 
+      --pod-network-cidr=192.168.0.0/16
+      --kubernetes-version 1.18.6
     args:
       creates: /etc/kubernetes/admin.conf
     async: 300   #run in background
@@ -29,24 +32,25 @@
                  #so that this command will succeed
     register: output
 
-  - name: Wait for the {{ kubelet_config }} file to appear
-    wait_for:
-      path: "{{ kubelet_config }}"
+  #not neccessary for 1.18 ??
+  #- name: Wait for the {{ kubelet_config }} file to appear
+  #  wait_for:
+  #    path: "{{ kubelet_config }}"
 
-  - name: Set the cgroup driver to systemd 
-    lineinfile:
-      path: "{{ kubelet_config }}"
-      line: "cgroupDriver: systemd"
-      regex: ^cgroupDriver
-    register: output_cgroup
+  #- name: Set the cgroup driver to systemd 
+  #  lineinfile:
+  #    path: "{{ kubelet_config }}"
+  #    line: "cgroupDriver: systemd"
+  #    regex: ^cgroupDriver
+  #  register: output_cgroup
 
-  - name: Restart kubelet if cgroup driver was changed
-    systemd:
-      state: restarted
-      enabled: true
-      daemon_reload: yes
-      name: kubelet
-    when: output_cgroup.changed
+  #- name: Restart kubelet if cgroup driver was changed
+  #  systemd:
+  #    state: restarted
+  #    enabled: true
+  #    daemon_reload: yes
+  #    name: kubelet
+  #  when: output_cgroup.changed
 
   - name: Check on the kubeadmin init background task to completion or timeout
     async_status:
